@@ -44,7 +44,8 @@
     "lint": "yarn prettier --check . && yarn eslint .",
     "format": "yarn prettier --write .",
     "test": "yarn build && node --test --enable-source-maps dist/test/",
-    "build": "yarn tsc"
+    "build": "yarn tsc",
+    "prepublishOnly": "rm -r dist || 0 && yarn build"
   },
   "devDependencies": {
     "@types/ms": "^0.7.31",
