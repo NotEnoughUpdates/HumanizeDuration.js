@@ -1,11 +1,11 @@
-const humanizeDuration = require("..");
-const assert = require("assert");
-const fs = require("fs");
-const path = require("path");
-const parseCsv = require("csv-parse").parse;
-const { promisify } = require("util");
+import assert, { strictEqual } from "assert";
+import { parse as parseCsv } from "csv-parse";
+import { createReadStream, readdir as _readdir } from "fs";
+import { basename, extname, join, resolve } from "path";
+import { promisify } from "util";
+import humanizeDuration, { humanizer } from "../humanize-duration";
 
-const readdir = promisify(fs.readdir);
+const readdir = promisify(_readdir);
 
 function options(language) {
   return {
@@ -17,17 +17,16 @@ function options(language) {
 
 describe("localized humanization", function () {
   before(async function () {
-    const definitionsPath = path.resolve(__dirname, "definitions");
+    const definitionsPath = resolve(__dirname, "definitions");
     const definitionFilePaths = (await readdir(definitionsPath))
-      .filter((f) => path.extname(f) === ".csv")
-      .map((f) => path.join(definitionsPath, f));
+      .filter((f) => extname(f) === ".csv")
+      .map((f) => join(definitionsPath, f));
     this.languages = new Map(
       await Promise.all(
         definitionFilePaths.map(async (filePath) => {
-          const language = path.basename(filePath, ".csv");
+          const language = basename(filePath, ".csv");
 
-          const parser = fs
-            .createReadStream(filePath)
+          const parser = createReadStream(filePath)
             .pipe(parseCsv({ delimiter: "$" }));
           const pairs = [];
           for await (const [msString, expectedResult] of parser) {
@@ -46,7 +45,7 @@ describe("localized humanization", function () {
   it("humanizes all languages correctly with the top-level function", function () {
     for (const [language, pairs] of this.languages) {
       for (const [ms, expectedResult] of pairs) {
-        assert.strictEqual(
+        strictEqual(
           humanizeDuration(ms, options(language)),
           expectedResult,
           `${language} localization error for ${ms} milliseconds`
@@ -57,9 +56,9 @@ describe("localized humanization", function () {
 
   it("humanizes all languages correctly with a humanizer", function () {
     for (const [language, pairs] of this.languages) {
-      const h = humanizeDuration.humanizer(options(language));
+      const h = humanizer(options(language));
       for (const [ms, expectedResult] of pairs) {
-        assert.strictEqual(
+        strictEqual(
           h(ms),
           expectedResult,
           `${language} localization error ${ms} milliseconds`

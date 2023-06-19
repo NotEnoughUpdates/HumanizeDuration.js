@@ -1,7 +1,11 @@
 {
-  "extends": "eslint:recommended",
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
+  ],
   "parserOptions": {
-    "ecmaVersion": 5
+    "ecmaVersion": 2022
   },
   "rules": {}
 }

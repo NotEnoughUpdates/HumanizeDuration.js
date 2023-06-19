@@ -1,17 +1,17 @@
-const humanizeDuration = require("..");
-const assert = require("assert");
-const fs = require("fs");
-const path = require("path");
-const parseCsv = require("csv-parse").parse;
+import { strictEqual } from "assert";
+import { parse as parseCsv } from "csv-parse";
+import { readFile } from "fs";
+import { resolve } from "path";
+import humanizeDuration, { getSupportedLanguages } from "../humanize-duration";
 
 describe("legacy Greek support", function () {
   // See https://github.com/EvanHahn/HumanizeDuration.js/issues/143
   // for more here.
 
   it('aliases "gr" to "el"', function (done) {
-    const greekPath = path.resolve(__dirname, "definitions", "el.csv");
+    const greekPath = resolve(__dirname, "definitions", "el.csv");
 
-    fs.readFile(greekPath, { encoding: "utf8" }, (err, data) => {
+    readFile(greekPath, { encoding: "utf8" }, (err, data) => {
       if (err) {
         return done(err);
       }
@@ -26,7 +26,7 @@ describe("legacy Greek support", function () {
 
           const humanizedGr = humanizeDuration(ms, { language: "gr" });
           const humanizedEl = humanizeDuration(ms, { language: "el" });
-          assert.strictEqual(humanizedGr, humanizedEl);
+          strictEqual(humanizedGr, humanizedEl);
         });
 
         done();
@@ -35,7 +35,7 @@ describe("legacy Greek support", function () {
   });
 
   it('does not include "gr" in getSupportedLanguages', function () {
-    const supportedLanguages = humanizeDuration.getSupportedLanguages();
-    assert.strictEqual(supportedLanguages.indexOf("gr"), -1);
+    const supportedLanguages = getSupportedLanguages();
+    strictEqual(supportedLanguages.indexOf("gr"), -1);
   });
 });
