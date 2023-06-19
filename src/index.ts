@@ -1,11 +1,19 @@
 // You can create a humanizer, which returns a function with default
 
+import assert from "node:assert/strict";
 import { LanguageCode, LanguageOptions, LANGUAGES } from "./languages.js";
 
 // parameters.
 export function humanizer(passedOptions?: HumanizerOptions) {
-  const result = (ms: number, humanizerOptions?: HumanizerOptions) => {
-    const options = Object.assign({}, result, humanizerOptions || {});
+  const result = function humanizer(
+    ms: number,
+    humanizerOptions?: HumanizerOptions
+  ): string {
+    const options = Object.assign(
+      {},
+      result,
+      humanizerOptions || {}
+    ) as HumanizerOptionsWithDefaults;
     return doHumanization(ms, options);
   };
 
@@ -39,12 +47,12 @@ export const humanizeDuration = humanizer({});
 export default humanizeDuration;
 
 // Build dictionary from options
-function getDictionary<L extends LanguageCode>(
-  options: HumanizerOptions
+function getDictionary(
+  options: HumanizerOptionsWithDefaults
 ): UnitTranslationOptions {
   let languagesFromOptions = [options.language];
 
-  if ("fallbacks" in options) {
+  if ("fallbacks" in options && options.fallbacks !== undefined) {
     if (Array.isArray(options.fallbacks) && options.fallbacks.length) {
       languagesFromOptions = languagesFromOptions.concat(options.fallbacks);
     } else {
@@ -57,7 +65,7 @@ function getDictionary<L extends LanguageCode>(
     if (languageToTry in options.languages) {
       return options.languages[languageToTry];
     } else if (languageToTry in LANGUAGES) {
-      return LANGUAGES[languageToTry];
+      return LANGUAGES[languageToTry as LanguageCode];
     }
   }
 
@@ -65,25 +73,29 @@ function getDictionary<L extends LanguageCode>(
 }
 
 // doHumanization does the bulk of the work.
-function doHumanization(ms: number, options: OptionsWithDefaults) {
-  let i, len, piece;
+function doHumanization(
+  ms: number,
+  options: HumanizerOptionsWithDefaults
+): string {
+  let piece;
 
   // Make sure we have a positive number.
-  // Has the nice sideffect of turning Number objects into primitives.
+  // Has the nice side effect of turning Number objects into primitives.
   ms = Math.abs(ms);
 
   const dictionary = getDictionary(options);
   const pieces = [];
 
   // Start at the top and keep removing units, bit by bit.
-  let unitName, unitMS, unitCount;
-  for (i = 0, len = options.units.length; i < len; i++) {
-    unitName = options.units[i];
-    unitMS = options.unitMeasures[unitName];
+  for (let i = 0; i < options.units.length; i++) {
+    let unitCount;
+
+    const unitName = options.units[i];
+    const unitMS = options.unitMeasures[unitName];
 
     // What's the number of full units we can fit?
-    if (i + 1 === len) {
-      if ("maxDecimalPoints" in options) {
+    if (i + 1 === options.units.length) {
+      if (options.maxDecimalPoints != null) {
         // We need to use this expValue to avoid rounding functionality of toFixed call
         const expValue = Math.pow(10, options.maxDecimalPoints);
         const unitCountFloat = ms / unitMS;
@@ -110,7 +122,7 @@ function doHumanization(ms: number, options: OptionsWithDefaults) {
   }
 
   let firstOccupiedUnitIndex = 0;
-  for (i = 0; i < pieces.length; i++) {
+  for (let i = 0; i < pieces.length; i++) {
     if (pieces[i].unitCount) {
       firstOccupiedUnitIndex = i;
       break;
@@ -118,18 +130,15 @@ function doHumanization(ms: number, options: OptionsWithDefaults) {
   }
 
   if (options.round) {
-    let ratioToLargerUnit, previousPiece;
-    for (i = pieces.length - 1; i >= 0; i--) {
+    for (let i = pieces.length - 1; i >= 0; i--) {
       piece = pieces[i];
       piece.unitCount = Math.round(piece.unitCount);
 
-      if (i === 0) {
-        break;
-      }
+      if (i === 0) break;
 
-      previousPiece = pieces[i - 1];
+      const previousPiece = pieces[i - 1];
 
-      ratioToLargerUnit =
+      const ratioToLargerUnit =
         options.unitMeasures[previousPiece.unitName] /
         options.unitMeasures[piece.unitName];
       if (
@@ -143,26 +152,23 @@ function doHumanization(ms: number, options: OptionsWithDefaults) {
   }
 
   const result = [];
-  for (i = 0, pieces.length; i < len; i++) {
+  // todo: why is `pieces.length` here?
+  let i;
+  for (i = 0, pieces.length; i < options.units.length; i++) {
     piece = pieces[i];
     if (piece.unitCount) {
       result.push(render(piece.unitCount, piece.unitName, dictionary, options));
     }
 
-    if (result.length === options.largest) {
-      break;
-    }
+    if (result.length === options.largest) break;
   }
 
   if (result.length) {
-    let delimiter;
-    if ("delimiter" in options) {
-      delimiter = options.delimiter;
-    } else if ("delimiter" in dictionary) {
-      delimiter = dictionary.delimiter;
-    } else {
-      delimiter = ", ";
-    }
+    const delimiter = (() => {
+      if (options.delimiter != null) return options.delimiter;
+      else if (dictionary.delimiter != null) return dictionary.delimiter;
+      else return ", ";
+    })();
 
     if (!options.conjunction || result.length === 1) {
       return result.join(delimiter);
@@ -173,6 +179,8 @@ function doHumanization(ms: number, options: OptionsWithDefaults) {
         options.serialComma ? "," : ""
       }${options.conjunction}${result.slice(-1)}`;
     }
+
+    assert.fail("this should never be reached");
   } else {
     return render(
       0,
@@ -186,33 +194,26 @@ function doHumanization(ms: number, options: OptionsWithDefaults) {
 /** @internal */
 function render(
   count: number,
-  type: keyof LanguageOptions,
-  dictionary: UnitTranslationOptions | LanguageOptions,
-  options: HumanizerOptions
+  type: Unit,
+  dictionary: UnitTranslationOptions,
+  options: HumanizerOptionsWithDefaults
 ) {
-  let decimal;
-  if ("decimal" in options) {
-    decimal = options.decimal;
-  } else if ("decimal" in dictionary) {
-    decimal = dictionary.decimal;
-  } else {
-    decimal = ".";
-  }
+  const decimal = (() => {
+    if (options.decimal != null) return options.decimal;
+    else if (dictionary.decimal != null) return dictionary.decimal;
+    else return ".";
+  })();
 
-  let countStr;
-  if (typeof dictionary._formatCount === "function") {
-    countStr = dictionary._formatCount(count, decimal);
-  } else {
-    countStr = count.toString().replace(".", decimal);
-  }
+  const countStr =
+    typeof dictionary._formatCount === "function"
+      ? dictionary._formatCount(count, decimal)
+      : count.toString().replace(".", decimal);
 
   const dictionaryValue = dictionary[type];
-  let word;
-  if (typeof dictionaryValue === "function") {
-    word = dictionaryValue(count);
-  } else {
-    word = dictionaryValue;
-  }
+  const word =
+    typeof dictionaryValue === "function"
+      ? dictionaryValue(count)
+      : dictionaryValue;
 
   if (dictionary._numberFirst) {
     return word + options.spacer + countStr;
@@ -237,7 +238,7 @@ export function getSupportedLanguages(): SupportedLanguage[] {
 export type SupportedLanguage = LanguageCode;
 export type Unit = "y" | "mo" | "w" | "d" | "h" | "m" | "s" | "ms";
 export type UnitMeasuresOptions = {
-  [unit in Unit]: number | undefined;
+  [unit in Unit]?: number;
 };
 export type UnitTranslationOptions = Partial<LanguageOptions>;
 
@@ -246,83 +247,85 @@ export interface Options {
    * Language for unit display (accepts an ISO 639-1 code from one of the supported languages).
    * @default 'en'
    */
-  language?: string | undefined;
+  language?: LanguageCode | string;
 
   /**
    * Fallback languages if the provided language cannot be found (accepts an ISO 639-1 code from one of the supported languages). It works from left to right.
    */
-  fallbacks?: string[] | undefined;
+  fallbacks?: (LanguageCode | string)[];
 
   /**
    * String to display between the previous unit and the next value.
    * @default ','
    */
-  delimiter?: string | undefined;
+  delimiter?: string;
 
   /**
    * String to display between each value and unit.
    * @default " "
    */
-  spacer?: string | undefined;
+  spacer?: string;
 
   /**
    * Number representing the maximum number of units to display for the duration.
    */
-  largest?: number | undefined;
+  largest?: number;
 
   /**
    * Array of strings to define which units are used to display the duration (if needed).
    */
-  units?: Unit[] | undefined;
+  units?: Unit[];
 
   /**
    * Boolean value. Use true to round the smallest unit displayed (can be combined with largest and units).
    * @default false
    */
-  round?: boolean | undefined;
+  round?: boolean;
 
   /**
    * String to substitute for the decimal point in a decimal fraction.
    */
-  decimal?: string | undefined;
+  decimal?: string;
 
   /**
    * String to include before the final unit. You can also set serialComma to false to eliminate the final comma.
    * @default ""
    */
-  conjunction?: string | undefined;
+  conjunction?: string;
 
   /**
    * @default true
    */
-  serialComma?: boolean | undefined;
+  serialComma?: boolean;
 
   /**
    * Number that defines a maximal decimal points for float values.
    */
-  maxDecimalPoints?: number | undefined;
+  maxDecimalPoints?: number;
 
   /**
    * Customize the value used to calculate each unit of time.
    */
-  unitMeasures?: UnitMeasuresOptions | undefined;
+  unitMeasures?: UnitMeasuresOptions;
 }
 
-type OptionsWithDefaults = Options &
-  Required<
-    Pick<
-      Options,
-      | "language"
-      | "spacer"
-      | "conjunction"
-      | "serialComma"
-      | "units"
-      // | "languages"
-      | "round"
-      | "unitMeasures"
-    >
-  >;
+type defaultKeys =
+  | "language"
+  | "spacer"
+  | "conjunction"
+  | "serialComma"
+  | "units"
+  | "languages"
+  | "round";
+
+type HumanizerOptionsWithDefaults = Omit<
+  HumanizerOptions,
+  defaultKeys | "unitMeasures"
+> &
+  Required<Pick<HumanizerOptions, defaultKeys>> & {
+    unitMeasures: Required<UnitMeasuresOptions>;
+  };
 
 export interface HumanizerOptions extends Options {
-  languages?: Record<string, UnitTranslationOptions> | undefined;
+  languages?: Record<string, UnitTranslationOptions>;
 }

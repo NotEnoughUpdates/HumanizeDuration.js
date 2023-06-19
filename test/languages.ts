@@ -1,49 +1,58 @@
-import assert, { strictEqual } from "assert";
 import { parse as parseCsv } from "csv-parse";
-import { createReadStream, readdir as _readdir } from "fs";
-import { basename, extname, join, resolve } from "path";
-import { promisify } from "util";
-import humanizeDuration, { humanizer } from "../humanize-duration";
+import assert, { strictEqual } from "node:assert";
+import { readdir as _readdir, createReadStream } from "node:fs";
+import { basename, dirname, extname, join, resolve } from "node:path";
+import { before, describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import humanizeDuration, { HumanizerOptions, humanizer } from "../src/index.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const readdir = promisify(_readdir);
 
-function options(language) {
+function options(language: string) {
   return {
     language,
     delimiter: "+",
-    units: ["y", "mo", "w", "d", "h", "m", "s", "ms"],
-  };
+    units: ["y", "mo", "w", "d", "h", "m", "s", "ms"]
+  } satisfies HumanizerOptions;
 }
 
-describe("localized humanization", function () {
-  before(async function () {
-    const definitionsPath = resolve(__dirname, "definitions");
+describe("localized humanization", () => {
+  let languages: Map<string, [number, string][]>;
+
+  before(async () => {
+    const definitionsPath = resolve(__dirname, "../../test/definitions");
     const definitionFilePaths = (await readdir(definitionsPath))
       .filter((f) => extname(f) === ".csv")
       .map((f) => join(definitionsPath, f));
-    this.languages = new Map(
+    languages = new Map(
       await Promise.all(
-        definitionFilePaths.map(async (filePath) => {
-          const language = basename(filePath, ".csv");
+        definitionFilePaths.map(
+          async (filePath): Promise<readonly [string, [number, string][]]> => {
+            const language = basename(filePath, ".csv");
 
-          const parser = createReadStream(filePath)
-            .pipe(parseCsv({ delimiter: "$" }));
-          const pairs = [];
-          for await (const [msString, expectedResult] of parser) {
-            pairs.push([parseFloat(msString), expectedResult]);
+            const parser = createReadStream(filePath).pipe(
+              parseCsv({ delimiter: "$" })
+            );
+            const pairs: [number, string][] = [];
+            for await (const [msString, expectedResult] of parser) {
+              pairs.push([parseFloat(msString), expectedResult]);
+            }
+
+            return [language, pairs];
           }
-
-          return [language, pairs];
-        })
+        )
       )
     );
 
-    assert(this.languages.has("en"), "Definition smoke test failed");
-    assert(this.languages.has("es"), "Definition smoke test failed");
+    assert(languages.has("en"), "Definition smoke test failed");
+    assert(languages.has("es"), "Definition smoke test failed");
   });
 
-  it("humanizes all languages correctly with the top-level function", function () {
-    for (const [language, pairs] of this.languages) {
+  it("humanizes all languages correctly with the top-level function", () => {
+    for (const [language, pairs] of languages) {
       for (const [ms, expectedResult] of pairs) {
         strictEqual(
           humanizeDuration(ms, options(language)),
@@ -54,8 +63,8 @@ describe("localized humanization", function () {
     }
   });
 
-  it("humanizes all languages correctly with a humanizer", function () {
-    for (const [language, pairs] of this.languages) {
+  it("humanizes all languages correctly with a humanizer", () => {
+    for (const [language, pairs] of languages) {
       const h = humanizer(options(language));
       for (const [ms, expectedResult] of pairs) {
         strictEqual(

@@ -1,11 +1,15 @@
-import { deepStrictEqual, notStrictEqual } from "assert";
-import { readdir } from "fs";
-import { basename, extname, resolve } from "path";
-import { getSupportedLanguages } from "..";
+import { deepStrictEqual, notStrictEqual } from "node:assert";
+import { readdir } from "node:fs";
+import { basename, dirname, extname, resolve } from "node:path";
+import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
+import { getSupportedLanguages } from "../src/index.js";
 
-describe("getSupportedLanguages", function () {
-  it("lists all supported languages", function (done) {
-    const definitionsPath = resolve(__dirname, "definitions");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+describe("getSupportedLanguages", () => {
+  it("lists all supported languages", (_, done) => {
+    const definitionsPath = resolve(__dirname, "../../test/definitions");
 
     readdir(definitionsPath, (err, files) => {
       if (err) {
@@ -22,7 +26,7 @@ describe("getSupportedLanguages", function () {
     });
   });
 
-  it("returns a different array each time", function () {
+  it("returns a different array each time", () => {
     notStrictEqual(getSupportedLanguages(), getSupportedLanguages());
   });
 });

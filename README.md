@@ -1,6 +1,6 @@
-# Humanize Duration
+# Humanize Duration Fork
 
-[![npm version](https://badge.fury.io/js/humanize-duration.svg)](https://npmjs.org/package/humanize-duration)
+[![npm version](https://badge.fury.io/js/@tanzanite%2Fhumanize-duration.svg)](https://npmjs.org/package/@tanzanite/humanize-duration)
 
 I have the time in milliseconds and I want it to become "30 minutes" or "3 days, 1 hour". Enter Humanize Duration!
 
@@ -8,28 +8,18 @@ I have the time in milliseconds and I want it to become "30 minutes" or "3 days,
 
 ## Installation
 
-This package is available as _humanize-duration_ on [npm](https://www.npmjs.com/package/humanize-duration) and Bower. You can also include the JavaScript file in the browser.
+This package is available as _@tanzanite/humanize-duration_ on [npm](https://www.npmjs.com/package/@tanzanite/humanize-duration).
 
 ```sh
-npm install humanize-duration
+yarn add @tanzanite/humanize-duration
+npm install @tanzanite/humanize-duration
 ```
 
 ## Basic usage
 
-With `require` (like in Node or with common build systems):
-
 ```js
-const humanizeDuration = require("humanize-duration");
+import humanizeDuration from "@tanzanite/humanize-duration";
 humanizeDuration(12000); // '12 seconds'
-```
-
-With a `<script>` tag:
-
-```html
-<script src="humanize-duration.js"></script>
-<script>
-  humanizeDuration(12000);
-</script>
 ```
 
 ## Usage
