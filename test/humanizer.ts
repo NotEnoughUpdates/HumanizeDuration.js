@@ -137,7 +137,7 @@ describe("humanizer", () => {
   });
 
   it('can do rounding with the "maxDecimalPoints" option', () => {
-    var h = humanizer({ maxDecimalPoints: 2 });
+    const h = humanizer({ maxDecimalPoints: 2 });
 
     strictEqual(h(8123.456789), "8.12 seconds");
     h.maxDecimalPoints = 3;

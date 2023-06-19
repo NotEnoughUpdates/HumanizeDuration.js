@@ -34,7 +34,8 @@ export const LANGUAGES: Languages = {
       for (let i = 0; i < characters.length; i++) {
         const character = characters[i];
         if (character in replacements) {
-          characters[i] = replacements[<any>character];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          characters[i] = replacements[character as any];
         }
       }
       return characters.join("");
